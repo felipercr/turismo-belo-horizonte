@@ -12,8 +12,17 @@ O sistema consiste em um aplicativo de turismo dedicado à cidade de Belo Horizo
 ## Tecnologias
 
 O servidor será uma aplicação em Python dockerizada e que contará com um banco de dados SQL para armazenar os PDIs, tours, logins e senhas.
-O frontent será feito com Javascript e deverá mostrar os PDIs e localizações de cada pessoa no mapa.
-A comunicação entre ambos será feita via RabbitMq ou REST (a decidir).
+O front-end será feito com JavaScript e deverá mostrar os PDIs e localizações de cada pessoa no mapa.
+A comunicação entre ambos será feita via RabbitMQ ou REST (a decidir).
+Como agente de IA, utilizaremos o Gemini para apoiar o desenvolvimento do sistema.
 
 ## Histórias de Usuário
 
+1. Como administrador, quero cadastrar pontos de interesse (nome, descrição, localização), para que fiquem disponíveis no sistema.
+2. Como administrador, quero criar um tour selecionando uma lista de PDIs, para oferecer roteiros prontos aos turistas.
+3. Como turista, quero ver a lista de tours disponíveis e escolher um, para começar meu passeio.
+4. Como turista, quero ver no mapa os PDIs do tour escolhido, para saber onde ir.
+5. Como turista, quero marcar manualmente um PDI como visitado, para acompanhar meu progresso.
+6. Como turista, quero criar um grupo e receber um código único, para convidar outras pessoas ao meu tour.
+7. Como turista, quero entrar em um grupo existente informando o código, para acompanhar o passeio com outras pessoas.
+8. Como membro de um grupo, quero ver a lista de PDIs já visitados por cada participante, para acompanhar o progresso do grupo.
