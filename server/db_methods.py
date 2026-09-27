@@ -55,6 +55,14 @@ def create_db_tables(connection_sql):
                 visited_at TIMESTAMP NOT NULL DEFAULT NOW(),
                 PRIMARY KEY (tourist_id, point_id)
             );
+
+            -- Usuários do sistema (login): administradores e turistas
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password VARCHAR(100) NOT NULL,
+                role VARCHAR(20) NOT NULL
+            );
         """)
         connection_sql.commit()
 
@@ -333,3 +341,57 @@ def get_group_members(group_id, connection_sql):
         if point_id is not None:
             member['visited'].append(point_id)
     return list(members.values())
+
+
+# ---------------------------------------------------------------------------
+# Usuários (cadastro e login)
+# ---------------------------------------------------------------------------
+
+def username_exists(username, connection_sql):
+    """Retorna True se já existe um usuário com esse nome."""
+    with connection_sql.cursor() as cur:
+        cur.execute("SELECT 1 FROM users WHERE username = %s;", (username,))
+        return cur.fetchone() is not None
+
+
+def register_user(data, connection_sql):
+    """Cadastra um usuário e retorna seu ID."""
+    query = "INSERT INTO users (username, password, role) VALUES (%s, %s, %s) RETURNING id;"
+    with connection_sql.cursor() as cur:
+        cur.execute(query, (data['username'], data['password'], data['role']))
+        user_id = cur.fetchone()[0]
+        connection_sql.commit()
+        return user_id
+
+
+def login_user(data, connection_sql):
+    """Retorna (id, role) se usuário e senha conferem, ou None."""
+    query = "SELECT id, role FROM users WHERE username = %s AND password = %s;"
+    with connection_sql.cursor() as cur:
+        cur.execute(query, (data['username'], data['password']))
+        return cur.fetchone()
+
+
+# ---------------------------------------------------------------------------
+# Exclusão de pontos e tours (administrador)
+# ---------------------------------------------------------------------------
+
+def point_exists(point_id, connection_sql):
+    """Retorna True se existe um ponto de interesse com esse ID."""
+    with connection_sql.cursor() as cur:
+        cur.execute("SELECT 1 FROM points_of_interest WHERE id = %s;", (point_id,))
+        return cur.fetchone() is not None
+
+
+def delete_point(point_id, connection_sql):
+    """Exclui o ponto (e seus vínculos com tours e visitas, via CASCADE)."""
+    with connection_sql.cursor() as cur:
+        cur.execute("DELETE FROM points_of_interest WHERE id = %s;", (point_id,))
+        connection_sql.commit()
+
+
+def delete_tour(tour_id, connection_sql):
+    """Exclui o tour e seus vínculos com pontos."""
+    with connection_sql.cursor() as cur:
+        cur.execute("DELETE FROM tours WHERE id = %s;", (tour_id,))
+        connection_sql.commit()

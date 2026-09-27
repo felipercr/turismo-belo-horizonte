@@ -50,5 +50,18 @@ services:
       DB_NAME: mydb
       RABBITMQ_HOST: rabbitmq
 
+  # API Gateway em Node.js: serve o frontend e repassa as requisições ao RabbitMQ
+  api-gateway:
+    build: ./api-gateway
+    container_name: node_api
+    restart: on-failure  # se o RabbitMQ demorar a ligar, tenta de novo
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      RABBITMQ_URL: 'amqp://guest:guest@rabbitmq:5672'
+    ports:
+      - "3000:3000"  # Frontend: http://localhost:3000
+
 volumes:
   pgdata:

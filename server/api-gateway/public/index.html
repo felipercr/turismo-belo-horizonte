@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Turismo BH - TP1</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; display: flex; height: 100vh; background: #e9ecef; }
+        #auth-container { margin: auto; padding: 30px; background: white; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 300px; }
+        .auth-toggle { cursor: pointer; color: #007BFF; text-decoration: underline; font-size: 14px; display: block; margin-top: 15px; text-align: center; }
+        #app-container { display: none; width: 100%; height: 100%; flex-direction: row; }
+        #sidebar { width: 440px; padding: 20px; background: #f4f4f4; overflow-y: auto; display: flex; flex-direction: column; }
+        #map { flex-grow: 1; height: 100%; }
+        .form-group { margin-bottom: 15px; }
+        .form-group input[type="text"], .form-group input[type="password"], .form-group input[type="number"], .form-group select { width: 100%; padding: 8px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background: #007BFF; color: white; border: none; cursor: pointer; border-radius: 4px; font-weight: bold; margin-bottom: 5px; }
+        button:hover { background: #0056b3; }
+        hr { margin: 20px 0; width: 100%; border: 0; border-top: 1px solid #ccc; }
+        .admin-only, .user-only { display: none; }
+        ul { list-style-type: none; padding: 0; }
+        
+        li { background: white; padding: 12px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: flex-start; }
+        .tour-info { flex-grow: 1; padding-right: 10px; }
+        
+        .btn-delete { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-top: 8px; align-self: flex-end; width: auto; }
+        .btn-delete:hover { background: #a71d2a; }
+        .btn-action { background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; width: auto; }
+        .btn-action:hover { background: #218838; }
+        
+        .btn-view-desc { background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; margin-top: 6px; align-self: flex-end; }
+        .btn-view-desc:hover { background: #117a8b; }
+        
+        .tour-progress-box { background: #fff; padding: 15px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-top: 15px; }
+        .detail-header { display: flex; justify-content: space-between; font-weight: bold; color: #555; border-bottom: 2px solid #ddd; padding-bottom: 5px; margin-bottom: 8px; font-size: 13px; }
+        
+        /* Garante que o local fica na esquerda e o horário na direita, perfeitamente alinhados na mesma linha */
+        .detail-row { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 12px; margin-bottom: 8px; background: white; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <div id="auth-container">
+        <h2 id="auth-title">Login</h2>
+        <div class="form-group"><input type="text" id="auth-username" placeholder="Usuário"></div>
+        <div class="form-group"><input type="password" id="auth-password" placeholder="Senha"></div>
+        <div class="form-group" id="role-group" style="display: none;">
+            <select id="auth-role">
+                <option value="user">Turista</option>
+                <option value="admin">Administrador</option>
+            </select>
+        </div>
+        <button id="btn-auth">Entrar</button>
+        <span class="auth-toggle" id="toggle-auth-mode">Não tem conta? Cadastre-se</span>
+    </div>
+
+    <div id="app-container">
+        <div id="sidebar">
+            <h2 id="welcome-msg">Bem-vindo</h2>
+            <button id="btn-logout" style="background: #dc3545; margin-bottom: 20px;">Sair</button>
+
+            <!-- PAINEL DO ADMINISTRADOR -->
+            <div class="admin-only">
+                <button id="btn-toggle-criar-pdi" style="background: #28a745;">+ Cadastrar Ponto Turístico</button>
+                <div id="form-criar-pdi" style="display: none; background: #fff; padding: 15px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px;">
+                    <h3 style="margin-top: 0;">Novo Ponto Turístico</h3>
+                    <p style="font-size: 12px; color: #555;">Dica: Clique no mapa para capturar a Latitude e Longitude.</p>
+                    <div class="form-group"><input type="text" id="nome-ponto" placeholder="Nome do PDI"></div>
+                    <div class="form-group"><input type="text" id="desc-ponto" placeholder="Descrição rápida"></div>
+                    <div class="form-group"><input type="number" id="lat-ponto" placeholder="Latitude" step="any"></div>
+                    <div class="form-group"><input type="number" id="lng-ponto" placeholder="Longitude" step="any"></div>
+                    <button id="btn-salvar">Salvar PDI</button>
+                </div>
+
+                <hr>
+                <h3>Pontos Turísticos</h3>
+                <ul id="lista-pontos"></ul>
+                <button id="btn-carregar" style="background: #6c757d; margin-top: 5px;">Atualizar Mapa</button>
+            </div>
+
+            <!-- PAINEL DO TURISTA -->
+            <div class="user-only">
+                <button id="btn-toggle-criar-tour" style="background: #28a745;">+ Criar Tour</button>
+                <div id="form-criar-tour" style="display: none; background: #fff; padding: 15px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px;">
+                    <h3 style="margin-top: 0;">Novo Tour</h3>
+                    <div class="form-group"><input type="text" id="nome-tour" placeholder="Nome do Tour"></div>
+                    <div class="form-group"><input type="text" id="desc-tour" placeholder="Descrição do roteiro"></div>
+                    <div class="form-group">
+                        <label>Selecione os Pontos Turísticos:</label>
+                        <div id="checkboxes-pontos-tour" style="max-height: 220px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-top: 5px; border-radius: 4px; font-size: 14px;"></div>
+                    </div>
+                    <button id="btn-salvar-tour">Confirmar Tour</button>
+                </div>
+
+                <button id="btn-comecar-tour" style="background: #ffc107; color: #000; margin-top: 10px;">🚀 Começar Tour</button>
+                
+                <div id="container-simulacao-tour" style="display: none;" class="tour-progress-box">
+                    <h3 style="margin-top: 0;">Selecionar Tour para Simular</h3>
+                    <div class="form-group">
+                        <select id="select-tour-ativo">
+                            <!-- Preenchido dinamicamente -->
+                        </select>
+                    </div>
+                    <button id="btn-confirmar-tour-ativo" style="background: #17a2b8;">Realizar Tour</button>
+                </div>
+
+                <!-- Botão Tours Já Realizados -->
+                <button id="btn-tours-realizados" style="background: #6f42c1; color: white; margin-top: 15px;">📋 Tours Já Realizados</button>
+                
+                <div id="container-tours-realizados" style="display: none;" class="tour-progress-box">
+                    <h3 style="margin-top: 0; color: #6f42c1;">Tours Já Realizados</h3>
+                    <ul id="lista-tours-realizados"></ul>
+                </div>
+
+                <!-- Detalhes do Tour Selecionado (Pontos Visitados) -->
+                <div id="progresso-tour-box" style="display: none;" class="tour-progress-box">
+                    <h3 style="margin-top: 0; color: #28a745;">Detalhes do Tour</h3>
+                    <h4 id="progresso-titulo-tour" style="color: #007BFF; margin-bottom: 5px;"></h4>
+                    <div class="detail-header">
+                        <span>Locais</span>
+                        <span>Horário registrado da visita</span>
+                    </div>
+                    <div id="progresso-lista-pontos"></div>
+                </div>
+
+                <hr>
+                <h3>Tours Adicionados</h3>
+                <ul id="lista-tours-turista"></ul>
+                <button id="btn-carregar-tours" style="background: #6c757d; margin-top: 5px;">Atualizar Tours</button>
+            </div>
+        </div>
+        
+        <div id="map"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let map;
+        let currentMarkers = [];
+        let redCircles = [];
+        let tourAtivoNoMapaId = null;
+        let isLoginMode = true;
+        let currentUserRole = 'user';
+        let toursRealizadosMemoria = [];
+
+        function resetarParaLogin() {
+            isLoginMode = true;
+            document.getElementById('auth-title').innerText = 'Login';
+            document.getElementById('btn-auth').innerText = 'Entrar';
+            document.getElementById('toggle-auth-mode').innerText = 'Não tem conta? Cadastre-se';
+            const roleGroup = document.getElementById('role-group');
+            if (roleGroup) roleGroup.style.display = 'none';
+            document.getElementById('auth-username').value = '';
+            document.getElementById('auth-password').value = '';
+        }
+
+        document.getElementById('toggle-auth-mode').addEventListener('click', () => {
+            isLoginMode = !isLoginMode;
+            document.getElementById('auth-title').innerText = isLoginMode ? 'Login' : 'Cadastro';
+            document.getElementById('btn-auth').innerText = isLoginMode ? 'Entrar' : 'Cadastrar';
+            document.getElementById('toggle-auth-mode').innerText = isLoginMode ? 'Não tem conta? Cadastre-se' : 'Já tem conta? Faça login';
+            const roleGroup = document.getElementById('role-group');
+            if (roleGroup) roleGroup.style.display = isLoginMode ? 'none' : 'block';
+        });
+
+        document.getElementById('btn-auth').addEventListener('click', async () => {
+            const username = document.getElementById('auth-username').value.trim();
+            const password = document.getElementById('auth-password').value.trim();
+            const role = isLoginMode ? 'user' : document.getElementById('auth-role').value;
+
+            if (!username || !password) return alert("Preencha usuário e senha!");
+
+            const endpoint = isLoginMode ? '/api/login' : '/api/register';
+            const payload = isLoginMode ? { username, password } : { username, password, role };
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    currentUserRole = data.role || role;
+                    iniciarApp(username, currentUserRole);
+                } else { 
+                    alert(data.message || "Erro na autenticação."); 
+                }
+            } catch (err) {
+                alert("Erro ao comunicar com o servidor.");
+            }
+        });
+
+        document.getElementById('btn-logout').addEventListener('click', () => {
+            document.getElementById('app-container').style.display = 'none';
+            document.getElementById('auth-container').style.display = 'block';
+            resetarParaLogin();
+        });
+
+        window.addEventListener('DOMContentLoaded', () => { resetarParaLogin(); });
+
+        function iniciarApp(username, role) {
+            document.getElementById('auth-container').style.display = 'none';
+            document.getElementById('app-container').style.display = 'flex';
+            document.getElementById('welcome-msg').innerText = `Bem-vindo, ${username} (${role === 'admin' ? 'Administrador' : 'Turista'})`;
+
+            document.querySelectorAll('.admin-only').forEach(el => el.style.display = role === 'admin' ? 'block' : 'none');
+            document.querySelectorAll('.user-only').forEach(el => el.style.display = role === 'user' ? 'block' : 'none');
+
+            if (!map) {
+                map = L.map('map').setView([-19.9167, -43.9345], 13);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+
+                map.on('click', function(e) {
+                    if (currentUserRole !== 'admin') return;
+                    const lat = e.latlng.lat.toFixed(6);
+                    const lng = e.latlng.lng.toFixed(6);
+
+                    L.popup()
+                        .setLatLng(e.latlng)
+                        .setContent(`<b>Coordenadas selecionadas:</b><br>Lat: ${lat}<br>Lng: ${lng}`)
+                        .openOn(map);
+
+                    const latInput = document.getElementById('lat-ponto');
+                    const lngInput = document.getElementById('lng-ponto');
+                    if (latInput && lngInput) {
+                        latInput.value = lat;
+                        lngInput.value = lng;
+                    }
+                });
+            }
+
+            carregarPontosGerais();
+            carregarTours();
+        }
+
+        function limparPontosVermelhos() {
+            redCircles.forEach(c => map.removeLayer(c));
+            redCircles = [];
+            tourAtivoNoMapaId = null;
+        }
+
+        async function carregarPontosGerais() {
+            const res = await fetch('/api/points');
+            const pontos = await res.json();
+            const lista = document.getElementById('lista-pontos');
+            const containerCheckboxes = document.getElementById('checkboxes-pontos-tour');
+            if(lista) lista.innerHTML = '';
+            if(containerCheckboxes) containerCheckboxes.innerHTML = '';
+            
+            currentMarkers.forEach(m => map.removeLayer(m));
+            currentMarkers = [];
+
+            pontos.forEach(ponto => {
+                if (currentUserRole === 'admin' && lista) {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <div class="tour-info"><b>${ponto.name}</b><br><small>${ponto.description}</small></div>
+                        <button class="btn-delete" onclick="excluirPonto(${ponto.id})">Excluir</button>
+                    `;
+                    lista.appendChild(li);
+                }
+
+                if (containerCheckboxes) {
+                    const divItem = document.createElement('div');
+                    divItem.style.marginBottom = '10px';
+                    divItem.style.borderBottom = '1px solid #eee';
+                    divItem.style.paddingBottom = '6px';
+                    divItem.style.display = 'flex';
+                    divItem.style.flexDirection = 'column';
+
+                    const topRow = document.createElement('div');
+                    topRow.innerHTML = `<input type="checkbox" id="cb-ponto-${ponto.id}" value="${ponto.id}" style="width: auto; margin-right: 8px;"> <label for="cb-ponto-${ponto.id}"><b>${ponto.name}</b></label>`;
+                    
+                    const descDiv = document.createElement('div');
+                    descDiv.id = `desc-ponto-box-${ponto.id}`;
+                    descDiv.style.display = 'none';
+                    descDiv.style.fontSize = '12px';
+                    descDiv.style.color = '#555';
+                    descDiv.style.marginTop = '4px';
+                    descDiv.style.paddingLeft = '20px';
+                    descDiv.innerText = ponto.description || 'Sem descrição.';
+
+                    const btnDesc = document.createElement('button');
+                    btnDesc.className = 'btn-view-desc';
+                    btnDesc.innerText = 'Visualizar Descrição';
+                    btnDesc.onclick = () => {
+                        if (descDiv.style.display === 'none') {
+                            descDiv.style.display = 'block';
+                            btnDesc.innerText = 'Ocultar Descrição';
+                        } else {
+                            descDiv.style.display = 'none';
+                            btnDesc.innerText = 'Visualizar Descrição';
+                        }
+                    };
+
+                    divItem.appendChild(topRow);
+                    divItem.appendChild(descDiv);
+                    divItem.appendChild(btnDesc);
+                    containerCheckboxes.appendChild(divItem);
+                }
+
+                if (currentUserRole === 'admin') {
+                    const marker = L.marker([ponto.latitude, ponto.longitude]).addTo(map).bindPopup(`<b>${ponto.name}</b><br>${ponto.description}`);
+                    currentMarkers.push(marker);
+                }
+            });
+        }
+
+        async function carregarTours() {
+            const res = await fetch('/api/tours');
+            const tours = await res.json();
+            const listaTours = document.getElementById('lista-tours-turista');
+            const selectTourAtivo = document.getElementById('select-tour-ativo');
+            if(listaTours) listaTours.innerHTML = '';
+            if(selectTourAtivo) selectTourAtivo.innerHTML = '';
+
+            if (tours.length === 0) {
+                if(selectTourAtivo) selectTourAtivo.innerHTML = `<option value="">Nenhum tour cadastrado</option>`;
+            } else {
+                tours.forEach(tour => {
+                    if (selectTourAtivo) {
+                        const opt = document.createElement('option');
+                        opt.value = tour.id;
+                        opt.textContent = tour.name;
+                        selectTourAtivo.appendChild(opt);
+                    }
+
+                    if (listaTours && currentUserRole === 'user') {
+                        const li = document.createElement('li');
+                        const nomesPontos = tour.points.map(p => p.name).join(', ');
+                        
+                        li.innerHTML = `
+                            <div class="tour-info">
+                                <b>${tour.name}</b><br>
+                                <small>${tour.description}</small><br><br>
+                                <span style="color: #007BFF; font-size: 12px;"><b>📍 Pontos:</b> ${nomesPontos || 'Nenhum'}</span>
+                            </div>
+                            <button class="btn-delete" onclick="excluirTour(${tour.id})">Excluir</button>
+                        `;
+                        listaTours.appendChild(li);
+                    }
+                });
+            }
+        }
+
+        document.getElementById('btn-comecar-tour').addEventListener('click', async () => {
+            await carregarTours();
+            const box = document.getElementById('container-simulacao-tour');
+            box.style.display = box.style.display === 'none' ? 'block' : 'none';
+        });
+
+        document.getElementById('btn-confirmar-tour-ativo').addEventListener('click', async () => {
+            const tourId = document.getElementById('select-tour-ativo').value;
+            if (!tourId) {
+                alert("Nenhum tour disponível para simular.");
+                return;
+            }
+
+            const res = await fetch('/api/tours');
+            const tours = await res.json();
+            const tourSelecionado = tours.find(t => t.id == tourId);
+
+            if (!tourSelecionado || tourSelecionado.points.length === 0) {
+                alert("Este tour não possui pontos cadastrados.");
+                return;
+            }
+
+            let horaAtual = Math.floor(Math.random() * (12 - 7 + 1)) + 7;
+            let pontosComHorario = tourSelecionado.points.map((ponto, index) => {
+                if (index > 0) {
+                    horaAtual += Math.floor(Math.random() * 2) + 1;
+                    if (horaAtual > 18) horaAtual = 18;
+                }
+                return {
+                    ...ponto,
+                    horario: `${String(horaAtual).padStart(2, '0')}:00`
+                };
+            });
+
+            toursRealizadosMemoria = toursRealizadosMemoria.filter(t => t.id !== tourSelecionado.id);
+            toursRealizadosMemoria.push({
+                ...tourSelecionado,
+                points: pontosComHorario
+            });
+
+            alert("Tour realizado e registado com sucesso!");
+            document.getElementById('container-simulacao-tour').style.display = 'none';
+        });
+
+        document.getElementById('btn-tours-realizados').addEventListener('click', () => {
+            const box = document.getElementById('container-tours-realizados');
+            const progressoBox = document.getElementById('progresso-tour-box');
+
+            if (box.style.display === 'block') {
+                box.style.display = 'none';
+                progressoBox.style.display = 'none';
+                limparPontosVermelhos();
+            } else {
+                box.style.display = 'block';
+                atualizarListaToursRealizados();
+            }
+        });
+
+        function atualizarListaToursRealizados() {
+            const listaRealizados = document.getElementById('lista-tours-realizados');
+            listaRealizados.innerHTML = '';
+
+            if (toursRealizadosMemoria.length === 0) {
+                listaRealizados.innerHTML = `<li><small>Nenhum tour realizado ainda.</small></li>`;
+                return;
+            }
+
+            toursRealizadosMemoria.forEach(tour => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div class="tour-info"><b>${tour.name}</b><br><small>${tour.description}</small></div>
+                    <button class="btn-action" onclick="alternarPontosVisitadosTour(${tour.id})">Pontos visitados</button>
+                `;
+                listaRealizados.appendChild(li);
+            });
+        }
+
+        function alternarPontosVisitadosTour(tourId) {
+            const tour = toursRealizadosMemoria.find(t => t.id === tourId);
+            const progressoBox = document.getElementById('progresso-tour-box');
+
+            if (tourAtivoNoMapaId === tourId) {
+                progressoBox.style.display = 'none';
+                limparPontosVermelhos();
+                return;
+            }
+
+            progressoBox.style.display = 'block';
+            document.getElementById('progresso-titulo-tour').innerText = tour.name;
+
+            const listaProgresso = document.getElementById('progresso-lista-pontos');
+            listaProgresso.innerHTML = '';
+            
+            redCircles.forEach(c => map.removeLayer(c));
+            redCircles = [];
+            tourAtivoNoMapaId = tour.id;
+
+            tour.points.forEach(ponto => {
+                const divRow = document.createElement('div');
+                divRow.className = 'detail-row';
+                // Nome do local à esquerda e hora alinhada na coluna da direita perfeitamente
+                divRow.innerHTML = `
+                    <span><b>${ponto.name}</b></span>
+                    <span style="color: #28a745; font-weight: bold; white-space: nowrap;">🕒 ${ponto.horario}</span>
+                `;
+                listaProgresso.appendChild(divRow);
+
+                const redCircle = L.circleMarker([ponto.latitude, ponto.longitude], {
+                    color: 'red',
+                    fillColor: '#f03',
+                    fillOpacity: 0.8,
+                    radius: 8
+                }).addTo(map).bindPopup(`<b>${ponto.name}</b><br>${ponto.description}<br>Visitado às ${ponto.horario}`);
+                
+                redCircles.push(redCircle);
+            });
+
+            if (redCircles.length > 0) {
+                const group = new L.featureGroup(redCircles);
+                map.fitBounds(group.getBounds().pad(0.2));
+            }
+        }
+
+        async function excluirPonto(pointId) {
+            if (!confirm("Tem certeza que deseja excluir este ponto turístico?")) return;
+            const res = await (await fetch(`/api/points/${pointId}`, { method: 'DELETE' })).json();
+            if (res.status === 'success') {
+                alert('Ponto excluído com sucesso!');
+                carregarPontosGerais();
+            } else {
+                alert(res.message || 'Erro ao excluir ponto.');
+            }
+        }
+
+        async function excluirTour(tourId) {
+            if (!confirm("Tem certeza que deseja excluir este tour?")) return;
+            const res = await (await fetch(`/api/tours/${tourId}`, { method: 'DELETE' })).json();
+            if (res.status === 'success') {
+                alert('Tour excluído com sucesso!');
+                carregarTours();
+            } else {
+                alert(res.message || 'Erro ao excluir tour.');
+            }
+        }
+
+        document.getElementById('btn-toggle-criar-pdi').addEventListener('click', () => {
+            const form = document.getElementById('form-criar-pdi');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        });
+
+        document.getElementById('btn-toggle-criar-tour').addEventListener('click', () => {
+            const form = document.getElementById('form-criar-tour');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        });
+
+        document.getElementById('btn-salvar').addEventListener('click', async () => {
+            const name = document.getElementById('nome-ponto').value;
+            const description = document.getElementById('desc-ponto').value;
+            const latitude = parseFloat(document.getElementById('lat-ponto').value);
+            const longitude = parseFloat(document.getElementById('lng-ponto').value);
+
+            if (!name || isNaN(latitude) || isNaN(longitude)) return alert("Preencha todos os campos corretamente!");
+
+            const res = await (await fetch('/api/points', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name, description, latitude, longitude }) })).json();
+            if(res.status === 'success') {
+                alert('Ponto salvo!');
+                document.getElementById('form-criar-pdi').style.display = 'none';
+                document.getElementById('nome-ponto').value = '';
+                document.getElementById('desc-ponto').value = '';
+                document.getElementById('lat-ponto').value = '';
+                document.getElementById('lng-ponto').value = '';
+                carregarPontosGerais();
+            }
+        });
+
+        document.getElementById('btn-salvar-tour').addEventListener('click', async () => {
+            const name = document.getElementById('nome-tour').value;
+            const description = document.getElementById('desc-tour').value;
+            const pontos_ids = Array.from(document.querySelectorAll('#checkboxes-pontos-tour input:checked')).map(cb => parseInt(cb.value));
+
+            if(!name || pontos_ids.length === 0) return alert("Preencha o nome e selecione pelo menos um ponto!");
+
+            const res = await (await fetch('/api/tours', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name, description, pontos_ids }) })).json();
+            if(res.status === 'success') {
+                alert('Tour criado!');
+                document.getElementById('form-criar-tour').style.display = 'none';
+                document.getElementById('nome-tour').value = '';
+                document.getElementById('desc-tour').value = '';
+                carregarTours();
+            }
+        });
+
+        document.getElementById('btn-carregar').addEventListener('click', carregarPontosGerais);
+        document.getElementById('btn-carregar-tours').addEventListener('click', carregarTours);
+    </script>
+</body>
+</html>

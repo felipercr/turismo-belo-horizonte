@@ -42,7 +42,7 @@ def callback(ch, method, properties, body, connection_sql):
             response_data = db_methods.get_tours(connection_sql)
 
         else:
-            response_data = {'error': f"Tipo de mensagem desconhecido: '{msg_type}'"}
+            response_data = {'status': 'error', 'message': f"Tipo de mensagem desconhecido: '{msg_type}'"}
 
         # Se o cliente solicitou resposta (RPC), envia o resultado de volta
         if properties.reply_to:
