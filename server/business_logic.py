@@ -7,6 +7,8 @@ Em caso de dado inválido, lança ValueError com uma mensagem clara; o
 callback do RabbitMQ devolve essa mensagem ao cliente como erro.
 """
 
+import secrets
+
 import db_methods
 
 
@@ -158,6 +160,45 @@ def handle_get_tourist_progress(payload, connection_sql):
 
 
 # ---------------------------------------------------------------------------
+# Histórias 6 e 7: criar grupo com código único e entrar em grupo
+# ---------------------------------------------------------------------------
+
+# Sem 0/O e 1/I/L para o código não ser confundido ao ser digitado
+CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+CODE_LENGTH = 6
+
+
+def _generate_unique_code(connection_sql):
+    while True:
+        code = ''.join(secrets.choice(CODE_ALPHABET) for _ in range(CODE_LENGTH))
+        if not db_methods.group_code_exists(code, connection_sql):
+            return code
+
+
+def handle_create_group(payload, connection_sql):
+    tourist = _get_tourist_or_fail(payload, connection_sql)
+    if tourist['tour_id'] is None:
+        raise ValueError("Escolha um tour antes de criar um grupo.")
+    if tourist['group_id'] is not None:
+        raise ValueError("Turista já está em um grupo.")
+    code = _generate_unique_code(connection_sql)
+    db_methods.create_group(code, tourist['tour_id'], tourist['id'], connection_sql)
+    return {'status': 'success', 'code': code}
+
+
+def handle_join_group(payload, connection_sql):
+    tourist = _get_tourist_or_fail(payload, connection_sql)
+    code = _require_text(payload, 'code', CODE_LENGTH).upper()
+    group = db_methods.get_group_by_code(code, connection_sql)
+    if group is None:
+        raise ValueError(f"Nenhum grupo encontrado com o código '{code}'.")
+    if tourist['group_id'] is not None:
+        raise ValueError("Turista já está em um grupo.")
+    db_methods.join_group(tourist['id'], group['id'], group['tour_id'], connection_sql)
+    return {'status': 'success', 'tour_id': group['tour_id']}
+
+
+# ---------------------------------------------------------------------------
 # Tabela de despacho: tipo de mensagem -> função que trata
 # (usada pelo callback em rabbitmq_methods.py)
 # ---------------------------------------------------------------------------
@@ -170,4 +211,6 @@ HANDLERS = {
     'choose_tour': handle_choose_tour,
     'mark_visited': handle_mark_visited,
     'get_tourist_progress': handle_get_tourist_progress,
+    'create_group': handle_create_group,
+    'join_group': handle_join_group,
 }
