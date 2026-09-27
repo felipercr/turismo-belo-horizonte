@@ -41,6 +41,8 @@ services:
         condition: service_started
       rabbitmq:
         condition: service_healthy
+      #- postgres
+      #- rabbitmq
     environment:
       DB_HOST: postgres
       DB_USER: admin
@@ -48,9 +50,9 @@ services:
       DB_NAME: mydb
       RABBITMQ_HOST: rabbitmq
 
-  # API Gateway em Node.js
+  # API Gateway em Node.js: serve o frontend e repassa as requisições ao RabbitMQ
   api-gateway:
-    build: ./api-gateway 
+    build: ./api-gateway
     container_name: node_api
     depends_on:
       rabbitmq:
@@ -58,7 +60,7 @@ services:
     environment:
       RABBITMQ_URL: 'amqp://guest:guest@rabbitmq:5672'
     ports:
-      - "3000:3000"
+      - "3000:3000"  # Frontend: http://localhost:3000
 
 volumes:
   pgdata:
