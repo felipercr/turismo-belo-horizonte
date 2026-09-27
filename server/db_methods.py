@@ -266,3 +266,70 @@ def get_visited_point_ids(tourist_id, connection_sql):
     with connection_sql.cursor() as cur:
         cur.execute(query, (tourist_id,))
         return [row[0] for row in cur.fetchall()]
+
+
+# ---------------------------------------------------------------------------
+# Grupos
+# ---------------------------------------------------------------------------
+
+def group_code_exists(code, connection_sql):
+    """Retorna True se já existe um grupo com esse código."""
+    with connection_sql.cursor() as cur:
+        cur.execute("SELECT 1 FROM tour_groups WHERE code = %s;", (code,))
+        return cur.fetchone() is not None
+
+
+def create_group(code, tour_id, tourist_id, connection_sql):
+    """Cria o grupo e coloca o turista criador dentro dele."""
+    with connection_sql.cursor() as cur:
+        cur.execute(
+            "INSERT INTO tour_groups (code, tour_id) VALUES (%s, %s) RETURNING id;",
+            (code, tour_id)
+        )
+        group_id = cur.fetchone()[0]
+        cur.execute("UPDATE tourists SET group_id = %s WHERE id = %s;", (group_id, tourist_id))
+        connection_sql.commit()
+        return group_id
+
+
+def get_group_by_code(code, connection_sql):
+    """Retorna o grupo como dicionário, ou None se o código não existir."""
+    query = "SELECT id, code, tour_id FROM tour_groups WHERE code = %s;"
+    with connection_sql.cursor() as cur:
+        cur.execute(query, (code,))
+        row = cur.fetchone()
+    if row is None:
+        return None
+    return {'id': row[0], 'code': row[1], 'tour_id': row[2]}
+
+
+def join_group(tourist_id, group_id, tour_id, connection_sql):
+    """Coloca o turista no grupo e no tour do grupo (zerando visitas antigas)."""
+    with connection_sql.cursor() as cur:
+        cur.execute("DELETE FROM visits WHERE tourist_id = %s;", (tourist_id,))
+        cur.execute(
+            "UPDATE tourists SET group_id = %s, tour_id = %s WHERE id = %s;",
+            (group_id, tour_id, tourist_id)
+        )
+        connection_sql.commit()
+
+
+def get_group_members(group_id, connection_sql):
+    """Retorna os membros do grupo com os IDs dos PDIs que cada um visitou."""
+    query = """
+        SELECT t.id, t.name, v.point_id
+        FROM tourists t
+        LEFT JOIN visits v ON v.tourist_id = t.id
+        WHERE t.group_id = %s
+        ORDER BY t.id, v.visited_at;
+    """
+    with connection_sql.cursor() as cur:
+        cur.execute(query, (group_id,))
+        rows = cur.fetchall()
+
+    members = {}
+    for tourist_id, name, point_id in rows:
+        member = members.setdefault(tourist_id, {'id': tourist_id, 'name': name, 'visited': []})
+        if point_id is not None:
+            member['visited'].append(point_id)
+    return list(members.values())
