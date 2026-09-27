@@ -35,36 +35,21 @@ def main():
         print(f"Erro ao conectar ao RabbitMQ: {e}")
         return
 
-    # 1. Enviar Pontos de Interesse (Gerarão IDs 1, 2, 3, 4 no Postgres)
+    # 1. Enviar Pontos de Interesse de BH (coordenadas aproximadas)
+    # Gerarão IDs 1 a 8 no Postgres, na ordem abaixo
+    def pdi(name, description, lat, lon):
+        return {'type': 'add_point', 'name': name, 'description': description,
+                'latitude': lat, 'longitude': lon}
+
     points = [
-        {
-            'type': 'add_point',
-            'name': 'Cristo Redentor',
-            'description': 'Estátua do Cristo no topo do Corcovado.',
-            'latitude': -22.951916,
-            'longitude': -43.210487
-        },
-        {
-            'type': 'add_point',
-            'name': 'Pão de Açúcar',
-            'description': 'Teleférico com vista panorâmica.',
-            'latitude': -22.949221,
-            'longitude': -43.154516
-        },
-        {
-            'type': 'add_point',
-            'name': 'Jardim Botânico',
-            'description': 'Parque com flora tropical.',
-            'latitude': -22.966888,
-            'longitude': -43.226722
-        },
-        {
-            'type': 'add_point',
-            'name': 'Maracanã',
-            'description': 'Estádio de futebol.',
-            'latitude': -22.912167,
-            'longitude': -43.230164
-        }
+        pdi('Praça da Liberdade', 'Praça com palácios e museus do Circuito Cultural.', -19.932000, -43.938000),
+        pdi('Mercado Central', 'Mercado tradicional com comidas e produtos mineiros.', -19.922500, -43.943200),
+        pdi('Praça Sete', 'Marco zero do centro de BH, com o Pirulito.', -19.919100, -43.938600),
+        pdi('Parque Municipal', 'Parque Américo Renné Giannetti, no centro.', -19.924500, -43.933600),
+        pdi('Igreja São Francisco de Assis', 'Igrejinha da Pampulha, obra de Niemeyer.', -19.858000, -43.978400),
+        pdi('Mineirão', 'Estádio Governador Magalhães Pinto.', -19.865900, -43.971100),
+        pdi('Museu de Arte da Pampulha', 'Antigo cassino projetado por Niemeyer.', -19.851100, -43.975800),
+        pdi('Mirante do Mangabeiras', 'Vista panorâmica da cidade.', -19.953000, -43.918000),
     ]
 
     for point in points:
@@ -73,19 +58,19 @@ def main():
 
     print("\n--- Enviando Tours ---")
 
-    # 2. Enviar Tours (Assumindo que os pontos 1 e 2 já foram criados)
+    # 2. Enviar Tours (IDs 1 e 2)
     tours = [
         {
             'type': 'add_tour',
-            'name': 'Tour Cartões Postais',
-            'description': 'Pontos mais famosos do Rio.',
-            'pontos_ids': [1, 2]  # Vincula Cristo (ID 1) e Pão de Açúcar (ID 2)
+            'name': 'Centro Histórico',
+            'description': 'Os pontos mais tradicionais do centro de BH.',
+            'pontos_ids': [1, 2, 3, 4]
         },
         {
             'type': 'add_tour',
-            'name': 'Tour Verde & Esporte',
-            'description': 'Natureza e futebol.',
-            'pontos_ids': []  # Inicia sem pontos
+            'name': 'Pampulha Modernista',
+            'description': 'Conjunto moderno da Pampulha, Patrimônio da Humanidade.',
+            'pontos_ids': [5, 6, 7]
         }
     ]
 
@@ -95,11 +80,9 @@ def main():
 
     print("\n--- Associando Pontos Existentes a Tours ---")
 
-    # 3. Vincular pontos individuais a tours existentes (Tour ID 2 e Tour ID 1)
+    # 3. Vincular um ponto individual a um tour existente
     links = [
-        {'type': 'add_point_to_tour', 'tour_id': 2, 'point_id': 3},  # Jardim Botânico no Tour 2
-        {'type': 'add_point_to_tour', 'tour_id': 2, 'point_id': 4},  # Maracanã no Tour 2
-        {'type': 'add_point_to_tour', 'tour_id': 1, 'point_id': 3}   # Jardim Botânico no Tour 1
+        {'type': 'add_point_to_tour', 'tour_id': 1, 'point_id': 8},  # Mirante no Centro Histórico
     ]
 
     for link in links:
