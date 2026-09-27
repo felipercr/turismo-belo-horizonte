@@ -26,4 +26,35 @@ Como agente de IA, utilizaremos o Gemini para apoiar o desenvolvimento do sistem
 6. Como turista, quero criar um grupo e receber um código único, para convidar outras pessoas ao meu tour.
 7. Como turista, quero entrar em um grupo existente informando o código, para acompanhar o passeio com outras pessoas.
 8. Como membro de um grupo, quero ver a lista de PDIs já visitados por cada participante, para acompanhar o progresso do grupo.
-Mensagens da API: ver api/API.md
+
+## Como rodar
+
+Pré-requisitos: [Git](https://git-scm.com) e [Docker Desktop](https://www.docker.com/products/docker-desktop) (aberto e rodando).
+
+1. Baixe o projeto (ou, se já tiver, atualize com `git checkout main` e `git pull`):
+   ```
+   git clone https://github.com/felipercr/turismo-belo-horizonte
+   cd turismo-belo-horizonte
+   ```
+2. Suba o sistema (banco, RabbitMQ, backend Python e API gateway Node):
+   ```
+   docker compose -f server/docker-compose.yml up --build
+   ```
+   Deixe esse terminal aberto e espere aparecer `API Gateway rodando na porta 3000`
+   (o RabbitMQ leva cerca de 40 segundos para ligar).
+3. Em outro terminal, na mesma pasta, cadastre os dados de exemplo (pontos e tours de BH):
+   ```
+   docker exec python_app python tests/populate_db.py
+   ```
+4. Abra **http://localhost:3000** no navegador.
+
+Para desligar: `Ctrl+C` no primeiro terminal. Para apagar também o banco:
+`docker compose -f server/docker-compose.yml down -v`.
+
+Demonstração das histórias 3 a 8 pelo terminal (com o sistema rodando):
+`docker exec python_app python tests/demo_historias.py`
+
+**Problema comum:** se o RabbitMQ não ligar com erro de `.erlang.cookie`, rode
+`docker compose -f server/docker-compose.yml down -v` e `docker volume prune -f` e suba de novo.
+
+Documentação das mensagens entre frontend e backend: [api/API.md](api/API.md).
