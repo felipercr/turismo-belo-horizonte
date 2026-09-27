@@ -26,3 +26,4 @@ Como agente de IA, utilizaremos o Gemini para apoiar o desenvolvimento do sistem
 6. Como turista, quero criar um grupo e receber um código único, para convidar outras pessoas ao meu tour.
 7. Como turista, quero entrar em um grupo existente informando o código, para acompanhar o passeio com outras pessoas.
 8. Como membro de um grupo, quero ver a lista de PDIs já visitados por cada participante, para acompanhar o progresso do grupo.
+Mensagens da API: ver server/API.md
