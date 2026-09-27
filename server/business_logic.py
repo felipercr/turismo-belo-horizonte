@@ -99,6 +99,65 @@ def handle_add_point_to_tour(payload, connection_sql):
 
 
 # ---------------------------------------------------------------------------
+# História 3: turista se cadastra, vê os tours e escolhe um
+# ---------------------------------------------------------------------------
+
+def _get_tourist_or_fail(payload, connection_sql):
+    tourist_id = _require_int(payload, 'tourist_id')
+    tourist = db_methods.get_tourist(tourist_id, connection_sql)
+    if tourist is None:
+        raise ValueError(f"Turista {tourist_id} não existe.")
+    return tourist
+
+
+def handle_register_tourist(payload, connection_sql):
+    name = _require_text(payload, 'name', 100)
+    tourist_id = db_methods.add_tourist(name, connection_sql)
+    return {'status': 'success', 'id': tourist_id}
+
+
+def handle_choose_tour(payload, connection_sql):
+    tourist = _get_tourist_or_fail(payload, connection_sql)
+    tour_id = _require_int(payload, 'tour_id')
+    if not db_methods.tour_exists(tour_id, connection_sql):
+        raise ValueError(f"Tour {tour_id} não existe.")
+    if tourist['group_id'] is not None:
+        raise ValueError("Turista está em um grupo e não pode trocar de tour.")
+    db_methods.set_tourist_tour(tourist['id'], tour_id, connection_sql)
+    return {'status': 'success'}
+
+
+# ---------------------------------------------------------------------------
+# Histórias 4 e 5: ver PDIs do tour (com progresso) e marcar como visitado
+# ---------------------------------------------------------------------------
+
+def handle_mark_visited(payload, connection_sql):
+    tourist = _get_tourist_or_fail(payload, connection_sql)
+    point_id = _require_int(payload, 'point_id')
+    if tourist['tour_id'] is None:
+        raise ValueError("Turista ainda não escolheu um tour.")
+    if not db_methods.is_point_in_tour(tourist['tour_id'], point_id, connection_sql):
+        raise ValueError(f"PDI {point_id} não faz parte do tour escolhido.")
+    if point_id in db_methods.get_visited_point_ids(tourist['id'], connection_sql):
+        raise ValueError(f"PDI {point_id} já foi marcado como visitado.")
+    db_methods.add_visit(tourist['id'], point_id, connection_sql)
+    return {'status': 'success'}
+
+
+def handle_get_tourist_progress(payload, connection_sql):
+    """Retorna o tour do turista com cada PDI marcado como visitado ou não."""
+    tourist = _get_tourist_or_fail(payload, connection_sql)
+    if tourist['tour_id'] is None:
+        return {**tourist, 'tour': None}
+    tour = next(t for t in db_methods.get_tours(connection_sql)
+                if t['id'] == tourist['tour_id'])
+    visited = set(db_methods.get_visited_point_ids(tourist['id'], connection_sql))
+    for point in tour['points']:
+        point['visited'] = point['id'] in visited
+    return {**tourist, 'tour': tour}
+
+
+# ---------------------------------------------------------------------------
 # Tabela de despacho: tipo de mensagem -> função que trata
 # (usada pelo callback em rabbitmq_methods.py)
 # ---------------------------------------------------------------------------
@@ -107,4 +166,8 @@ HANDLERS = {
     'add_point': handle_add_point,
     'add_tour': handle_add_tour,
     'add_point_to_tour': handle_add_point_to_tour,
+    'register_tourist': handle_register_tourist,
+    'choose_tour': handle_choose_tour,
+    'mark_visited': handle_mark_visited,
+    'get_tourist_progress': handle_get_tourist_progress,
 }
