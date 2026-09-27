@@ -31,6 +31,30 @@ def create_db_tables(connection_sql):
                 point_of_interest_id INT NOT NULL REFERENCES points_of_interest(id) ON DELETE CASCADE,
                 PRIMARY KEY (tour_id, point_of_interest_id)
             );
+
+            -- Grupos de turistas que fazem o mesmo tour juntos
+            CREATE TABLE IF NOT EXISTS tour_groups (
+                id SERIAL PRIMARY KEY,
+                code VARCHAR(8) UNIQUE NOT NULL,
+                tour_id INT NOT NULL REFERENCES tours(id) ON DELETE CASCADE,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW()
+            );
+
+            -- Turistas: cada um escolhe um tour e pode estar em um grupo
+            CREATE TABLE IF NOT EXISTS tourists (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                tour_id INT REFERENCES tours(id) ON DELETE SET NULL,
+                group_id INT REFERENCES tour_groups(id) ON DELETE SET NULL
+            );
+
+            -- PDIs que cada turista já visitou
+            CREATE TABLE IF NOT EXISTS visits (
+                tourist_id INT NOT NULL REFERENCES tourists(id) ON DELETE CASCADE,
+                point_id INT NOT NULL REFERENCES points_of_interest(id) ON DELETE CASCADE,
+                visited_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (tourist_id, point_id)
+            );
         """)
         connection_sql.commit()
 
