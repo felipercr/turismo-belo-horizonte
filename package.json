@@ -1,0 +1,26 @@
+{
+  "name": "turismo-belo-horizonte",
+  "version": "1.0.0",
+  "description": "**Nomes**:\r   - Felipe Reis Campanha Ribeiro (back)\r   - Gabriel Shimada de Oliveira (full)\r   - Julia Freitas Fernandes Pires (full)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Juliaffp/turismo-belo-horizonte.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Juliaffp/turismo-belo-horizonte/issues"
+  },
+  "homepage": "https://github.com/Juliaffp/turismo-belo-horizonte#readme",
+  "dependencies": {
+    "amqplib": "^2.0.1",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "uuid": "^14.0.2"
+  }
+}
