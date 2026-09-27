@@ -229,6 +229,52 @@ def handle_get_group_progress(payload, connection_sql):
 
 
 # ---------------------------------------------------------------------------
+# Administrador: excluir pontos e tours
+# ---------------------------------------------------------------------------
+
+def handle_delete_point(payload, connection_sql):
+    point_id = _require_int(payload, 'point_id')
+    if not db_methods.point_exists(point_id, connection_sql):
+        raise ValueError(f"Ponto turístico {point_id} não existe.")
+    db_methods.delete_point(point_id, connection_sql)
+    return {'status': 'success'}
+
+
+def handle_delete_tour(payload, connection_sql):
+    tour_id = _require_int(payload, 'tour_id')
+    if not db_methods.tour_exists(tour_id, connection_sql):
+        raise ValueError(f"Tour {tour_id} não existe.")
+    db_methods.delete_tour(tour_id, connection_sql)
+    return {'status': 'success'}
+
+
+# ---------------------------------------------------------------------------
+# Autenticação: cadastro e login
+# ---------------------------------------------------------------------------
+
+def handle_register(payload, connection_sql):
+    username = _require_text(payload, 'username', 50)
+    password = _require_text(payload, 'password', 100)
+    role = payload.get('role', 'user')
+    if role not in ('user', 'admin'):
+        raise ValueError("Papel de usuário inválido.")
+    if db_methods.username_exists(username, connection_sql):
+        raise ValueError(f"O usuário '{username}' já existe.")
+    data = {'username': username, 'password': password, 'role': role}
+    user_id = db_methods.register_user(data, connection_sql)
+    return {'status': 'success', 'id': user_id, 'role': role}
+
+
+def handle_login(payload, connection_sql):
+    username = _require_text(payload, 'username', 50)
+    password = _require_text(payload, 'password', 100)
+    result = db_methods.login_user({'username': username, 'password': password}, connection_sql)
+    if result is None:
+        raise ValueError("Usuário ou senha inválidos.")
+    return {'status': 'success', 'id': result[0], 'role': result[1]}
+
+
+# ---------------------------------------------------------------------------
 # Tabela de despacho: tipo de mensagem -> função que trata
 # (usada pelo callback em rabbitmq_methods.py)
 # ---------------------------------------------------------------------------
@@ -244,4 +290,8 @@ HANDLERS = {
     'create_group': handle_create_group,
     'join_group': handle_join_group,
     'get_group_progress': handle_get_group_progress,
+    'delete_point': handle_delete_point,
+    'delete_tour': handle_delete_tour,
+    'register': handle_register,
+    'login': handle_login,
 }
