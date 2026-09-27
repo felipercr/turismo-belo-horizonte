@@ -83,3 +83,28 @@ def handle_add_tour(payload, connection_sql):
     }
     tour_id = db_methods.add_tour(data, connection_sql)
     return {'status': 'success', 'id': tour_id}
+
+
+def handle_add_point_to_tour(payload, connection_sql):
+    tour_id = _require_int(payload, 'tour_id')
+    point_id = _require_int(payload, 'point_id')
+    if not db_methods.tour_exists(tour_id, connection_sql):
+        raise ValueError(f"Tour {tour_id} não existe.")
+    if not db_methods.get_existing_point_ids([point_id], connection_sql):
+        raise ValueError(f"PDI {point_id} não existe.")
+    if db_methods.is_point_in_tour(tour_id, point_id, connection_sql):
+        raise ValueError(f"PDI {point_id} já faz parte do tour {tour_id}.")
+    db_methods.add_point_to_tour({'tour_id': tour_id, 'point_id': point_id}, connection_sql)
+    return {'status': 'success'}
+
+
+# ---------------------------------------------------------------------------
+# Tabela de despacho: tipo de mensagem -> função que trata
+# (usada pelo callback em rabbitmq_methods.py)
+# ---------------------------------------------------------------------------
+
+HANDLERS = {
+    'add_point': handle_add_point,
+    'add_tour': handle_add_tour,
+    'add_point_to_tour': handle_add_point_to_tour,
+}

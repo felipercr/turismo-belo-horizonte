@@ -4,6 +4,7 @@ import json
 from functools import partial
 
 import db_methods
+import business_logic
 
 def connect_to_rabbitmq(host, max_retries=5, delay=10):
     credentials = pika.PlainCredentials('guest', 'guest')
@@ -29,18 +30,9 @@ def callback(ch, method, properties, body, connection_sql):
         msg_type = payload.get('type')
         response_data = None
 
-        # --- Ações de Escrita (retornam confirmação/ID para o cliente) ---
-        if msg_type == 'add_point':
-            point_id = db_methods.add_point(payload, connection_sql)
-            response_data = {'status': 'success', 'id': point_id}
-
-        elif msg_type == 'add_tour':
-            tour_id = db_methods.add_tour(payload, connection_sql)
-            response_data = {'status': 'success', 'id': tour_id}
-
-        elif msg_type == 'add_point_to_tour':
-            db_methods.add_point_to_tour(payload, connection_sql)
-            response_data = {'status': 'success'}
+        # --- Ações tratadas pelas regras de negócio (business_logic.py) ---
+        if msg_type in business_logic.HANDLERS:
+            response_data = business_logic.HANDLERS[msg_type](payload, connection_sql)
 
         # --- Ações de Leitura ---
         elif msg_type == 'get_points':
