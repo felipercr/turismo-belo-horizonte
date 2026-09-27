@@ -42,11 +42,21 @@ async function initRabbitMQ(rabbitUrl, retries = 5, delay = 5000) {
     process.exit(1); // Encerra a aplicação se não conseguir de forma alguma
 }
 
-async function sendRpcMessage(msgType, payload) {
-    // ... (mantenha o restante da função sendRpcMessage igual)
-    return new Promise((resolve) => {
+// Envia uma mensagem para o backend e espera a resposta (padrão RPC).
+// Se o backend não responder em timeoutMs, a Promise é rejeitada, para o
+// navegador não ficar esperando para sempre.
+async function sendRpcMessage(msgType, payload, timeoutMs = 5000) {
+    return new Promise((resolve, reject) => {
         const correlationId = uuidv4();
-        pendingRequests.set(correlationId, resolve);
+        const timer = setTimeout(() => {
+            pendingRequests.delete(correlationId);
+            reject(new Error(`Sem resposta do backend para '${msgType}'.`));
+        }, timeoutMs);
+
+        pendingRequests.set(correlationId, (response) => {
+            clearTimeout(timer);
+            resolve(response);
+        });
 
         const message = { type: msgType, ...payload };
 

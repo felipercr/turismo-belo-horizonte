@@ -12,7 +12,7 @@ app.get('/api/points', async (req, res) => {
         const response = await sendRpcMessage('get_points', {});
         res.json(response);
     } catch (error) {
-        res.status(500).json({ error: "Erro ao comunicar com o servidor." });
+        res.status(500).json({ status: 'error', message: "Erro ao comunicar com o servidor." });
     }
 });
 
@@ -21,7 +21,7 @@ app.post('/api/points', async (req, res) => {
         const response = await sendRpcMessage('add_point', req.body);
         res.json(response);
     } catch (error) {
-        res.status(500).json({ error: "Erro ao adicionar ponto." });
+        res.status(500).json({ status: 'error', message: "Erro ao adicionar ponto." });
     }
 });
 
@@ -32,7 +32,7 @@ app.delete('/api/points/:id', async (req, res) => {
         const response = await sendRpcMessage('delete_point', { point_id: pointId });
         res.json(response);
     } catch (error) {
-        res.status(500).json({ error: "Erro ao excluir ponto turístico." });
+        res.status(500).json({ status: 'error', message: "Erro ao excluir ponto turístico." });
     }
 });
 
@@ -41,7 +41,7 @@ app.get('/api/tours', async (req, res) => {
         const response = await sendRpcMessage('get_tours', {});
         res.json(response);
     } catch (error) {
-        res.status(500).json({ error: "Erro ao buscar tours." });
+        res.status(500).json({ status: 'error', message: "Erro ao buscar tours." });
     }
 });
 
@@ -50,7 +50,7 @@ app.post('/api/tours', async (req, res) => {
         const response = await sendRpcMessage('add_tour', req.body);
         res.json(response);
     } catch (error) {
-        res.status(500).json({ error: "Erro ao adicionar tour." });
+        res.status(500).json({ status: 'error', message: "Erro ao adicionar tour." });
     }
 });
 
@@ -61,7 +61,7 @@ app.delete('/api/tours/:id', async (req, res) => {
         const response = await sendRpcMessage('delete_tour', { tour_id: tourId });
         res.json(response);
     } catch (error) {
-        res.status(500).json({ error: "Erro ao excluir tour." });
+        res.status(500).json({ status: 'error', message: "Erro ao excluir tour." });
     }
 });
 
@@ -70,7 +70,7 @@ app.post('/api/register', async (req, res) => {
         const response = await sendRpcMessage('register', req.body);
         res.json(response);
     } catch (error) {
-        res.status(500).json({ error: "Erro interno ao registrar." });
+        res.status(500).json({ status: 'error', message: "Erro interno ao registrar." });
     }
 });
 
@@ -79,7 +79,7 @@ app.post('/api/login', async (req, res) => {
         const response = await sendRpcMessage('login', req.body);
         res.json(response);
     } catch (error) {
-        res.status(500).json({ error: "Erro interno ao fazer login." });
+        res.status(500).json({ status: 'error', message: "Erro interno ao fazer login." });
     }
 });
 
