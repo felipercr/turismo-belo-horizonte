@@ -176,3 +176,45 @@ def get_tours(connection_sql):
                 })
 
         return list(tours_map.values())
+
+# ---------------------------------------------------------------------------
+# Consultas auxiliares usadas pelas regras de negócio (business_logic.py)
+# ---------------------------------------------------------------------------
+
+def get_existing_point_ids(point_ids, connection_sql):
+    """Dentre os IDs informados, retorna o conjunto dos que existem no banco."""
+    if not point_ids:
+        return set()
+    query = "SELECT id FROM points_of_interest WHERE id = ANY(%s);"
+    with connection_sql.cursor() as cur:
+        cur.execute(query, (list(point_ids),))
+        return {row[0] for row in cur.fetchall()}
+
+
+def tour_exists(tour_id, connection_sql):
+    """Retorna True se existe um tour com esse ID."""
+    with connection_sql.cursor() as cur:
+        cur.execute("SELECT 1 FROM tours WHERE id = %s;", (tour_id,))
+        return cur.fetchone() is not None
+
+
+def is_point_in_tour(tour_id, point_id, connection_sql):
+    """Retorna True se o PDI faz parte do tour."""
+    query = """
+        SELECT 1 FROM tour_points
+        WHERE tour_id = %s AND point_of_interest_id = %s;
+    """
+    with connection_sql.cursor() as cur:
+        cur.execute(query, (tour_id, point_id))
+        return cur.fetchone() is not None
+
+
+def get_tour_point_ids(tour_id, connection_sql):
+    """Retorna a lista de IDs dos PDIs de um tour."""
+    query = """
+        SELECT point_of_interest_id FROM tour_points
+        WHERE tour_id = %s ORDER BY point_of_interest_id;
+    """
+    with connection_sql.cursor() as cur:
+        cur.execute(query, (tour_id,))
+        return [row[0] for row in cur.fetchall()]
