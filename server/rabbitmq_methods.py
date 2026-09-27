@@ -30,30 +30,9 @@ def callback(ch, method, properties, body, connection_sql):
         msg_type = payload.get('type')
         response_data = None
 
-<<<<<<< Updated upstream
         # --- Ações tratadas pelas regras de negócio (api/business_logic.py) ---
         if msg_type in business_logic.HANDLERS:
             response_data = business_logic.HANDLERS[msg_type](payload, connection_sql)
-=======
-        # --- Ações de Escrita (retornam confirmação/ID para o cliente) ---
-        if msg_type == 'add_point':
-            point_id = db_methods.add_point(payload, connection_sql)
-            response_data = {'status': 'success', 'id': point_id}
-
-        elif msg_type == 'add_tour':
-            tour_id = db_methods.add_tour(payload, connection_sql)
-            response_data = {'status': 'success', 'id': tour_id}
-
-        elif msg_type == 'add_point_to_tour':
-            db_methods.add_point_to_tour(payload, connection_sql)
-            response_data = {'status': 'success'}
-            
-        elif msg_type == 'register':
-            response_data = db_methods.register_user(payload, connection_sql)
-
-        elif msg_type == 'login':
-            response_data = db_methods.login_user(payload, connection_sql)
->>>>>>> Stashed changes
 
         # --- Ações de Leitura ---
         elif msg_type == 'get_points':
@@ -94,8 +73,10 @@ def callback(ch, method, properties, body, connection_sql):
                 ),
                 body=json.dumps({'status': 'error', 'message': str(e)}, ensure_ascii=False)
             )
+            # Confirma a mensagem para removê-la da fila, pois o erro já foi notificado
             ch.basic_ack(delivery_tag=method.delivery_tag)
         else:
+            # Se não era RPC, rejeita a mensagem sem colocar de volta na fila (evita loop infinito)
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
 
