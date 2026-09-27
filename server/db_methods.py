@@ -8,6 +8,7 @@ def connect_to_db(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME):
     except Exception as e:
         raise RuntimeError(f" Database connection failed: {e}")
 
+
 def create_db_tables(connection_sql):
     with connection_sql.cursor() as cur:
         cur.execute("""
@@ -31,7 +32,6 @@ def create_db_tables(connection_sql):
                 PRIMARY KEY (tour_id, point_of_interest_id)
             );
 
-<<<<<<< Updated upstream
             -- Grupos de turistas que fazem o mesmo tour juntos
             CREATE TABLE IF NOT EXISTS tour_groups (
                 id SERIAL PRIMARY KEY,
@@ -54,18 +54,21 @@ def create_db_tables(connection_sql):
                 point_id INT NOT NULL REFERENCES points_of_interest(id) ON DELETE CASCADE,
                 visited_at TIMESTAMP NOT NULL DEFAULT NOW(),
                 PRIMARY KEY (tourist_id, point_id)
-=======
+            );
+
+            -- Usuários do sistema (login): administradores e turistas
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 username VARCHAR(50) UNIQUE NOT NULL,
                 password VARCHAR(100) NOT NULL,
                 role VARCHAR(20) NOT NULL
->>>>>>> Stashed changes
             );
         """)
         connection_sql.commit()
 
+
 def add_point(data, connection_sql):
+    """Insere um novo ponto de interesse recebido do RabbitMQ."""
     query = """
         INSERT INTO points_of_interest (name, description, latitude, longitude)
         VALUES (%s, %s, %s, %s)
@@ -73,28 +76,19 @@ def add_point(data, connection_sql):
     """
     with connection_sql.cursor() as cur:
         cur.execute(query, (
-            data['name'], 
-            data.get('description', ''), 
-            float(data['latitude']), 
-            float(data['longitude'])
+            data['name'],
+            data.get('description', ''),
+            data['latitude'],
+            data['longitude']
         ))
         point_id = cur.fetchone()[0]
         connection_sql.commit()
+        print(f" [✓] Ponto '{data['name']}' inserido com ID {point_id}")
         return point_id
 
-def delete_point(point_id, connection_sql):
-    query = "DELETE FROM points_of_interest WHERE id = %s;"
-    with connection_sql.cursor() as cur:
-        cur.execute(query, (point_id,))
-        connection_sql.commit()
-
-def point_exists(point_id, connection_sql):
-    query = "SELECT 1 FROM points_of_interest WHERE id = %s;"
-    with connection_sql.cursor() as cur:
-        cur.execute(query, (point_id,))
-        return cur.fetchone() is not None
 
 def add_tour(data, connection_sql):
+    """Insere um tour e vincula a lista de IDs de pontos existente."""
     query_tour = "INSERT INTO tours (name, description) VALUES (%s, %s) RETURNING id;"
     query_vinculo = "INSERT INTO tour_points (tour_id, point_of_interest_id) VALUES (%s, %s);"
 
@@ -106,51 +100,57 @@ def add_tour(data, connection_sql):
             cur.execute(query_vinculo, (tour_id, point_id))
 
         connection_sql.commit()
+        print(f" [✓] Tour '{data['name']}' inserido com ID {tour_id}")
         return tour_id
 
-def delete_tour(tour_id, connection_sql):
-    query = "DELETE FROM tours WHERE id = %s;"
-    with connection_sql.cursor() as cur:
-        cur.execute(query, (tour_id,))
-        connection_sql.commit()
-
-def tour_exists(tour_id, connection_sql):
-    query = "SELECT 1 FROM tours WHERE id = %s;"
-    with connection_sql.cursor() as cur:
-        cur.execute(query, (tour_id,))
-        return cur.fetchone() is not None
 
 def add_point_to_tour(data, connection_sql):
-    query = "INSERT INTO tour_points (tour_id, point_of_interest_id) VALUES (%s, %s);"
+    """Associa um ponto de interesse existente a um tour existente."""
+    query = """
+        INSERT INTO tour_points (tour_id, point_of_interest_id)
+        VALUES (%s, %s);
+    """
     with connection_sql.cursor() as cur:
         cur.execute(query, (data['tour_id'], data['point_id']))
         connection_sql.commit()
+        print(f" [✓] Ponto {data['point_id']} associado ao Tour {data['tour_id']}")
+
 
 def get_points(connection_sql):
-    query = "SELECT id, name, description, latitude, longitude FROM points_of_interest ORDER BY id;"
+    """Retorna todos os pontos de interesse do banco de dados."""
+    query = """
+        SELECT id, name, description, latitude, longitude
+        FROM points_of_interest
+        ORDER BY id;
+    """
     with connection_sql.cursor() as cur:
         cur.execute(query)
         rows = cur.fetchall()
+
         points = []
         for row in rows:
             points.append({
-                'id': row[0], 'name': row[1], 'description': row[2],
-                'latitude': float(row[3]), 'longitude': float(row[4])
+                'id': row[0],
+                'name': row[1],
+                'description': row[2],
+                'latitude': float(row[3]),
+                'longitude': float(row[4])
             })
         return points
 
-def get_existing_point_ids(point_ids, connection_sql):
-    query = "SELECT id FROM points_of_interest WHERE id = ANY(%s);"
-    with connection_sql.cursor() as cur:
-        cur.execute(query, (point_ids,))
-        return {row[0] for row in cur.fetchall()}
 
 def get_tours(connection_sql):
+    """Retorna todos os tours cadastrados e a lista de seus respectivos pontos."""
     query = """
         SELECT 
-            t.id AS tour_id, t.name AS tour_name, t.description AS tour_description,
-            p.id AS point_id, p.name AS point_name, p.description AS point_description,
-            p.latitude, p.longitude
+            t.id AS tour_id,
+            t.name AS tour_name,
+            t.description AS tour_description,
+            p.id AS point_id,
+            p.name AS point_name,
+            p.description AS point_description,
+            p.latitude,
+            p.longitude
         FROM tours t
         LEFT JOIN tour_points tp ON t.id = tp.tour_id
         LEFT JOIN points_of_interest p ON tp.point_of_interest_id = p.id
@@ -159,19 +159,30 @@ def get_tours(connection_sql):
     with connection_sql.cursor() as cur:
         cur.execute(query)
         rows = cur.fetchall()
+
         tours_map = {}
         for row in rows:
             tour_id = row[0]
+            
+            # Inicializa a estrutura do tour se ainda não existir
             if tour_id not in tours_map:
-                tours_map[tour_id] = {'id': tour_id, 'name': row[1], 'description': row[2], 'points': []}
+                tours_map[tour_id] = {
+                    'id': tour_id,
+                    'name': row[1],
+                    'description': row[2],
+                    'points': []
+                }
+            
+            # Adiciona o ponto apenas se houver vinculo (evita None em tours sem pontos)
             if row[3] is not None:
                 tours_map[tour_id]['points'].append({
-                    'id': row[3], 'name': row[4], 'description': row[5],
-                    'latitude': float(row[6]), 'longitude': float(row[7])
+                    'id': row[3],
+                    'name': row[4],
+                    'description': row[5],
+                    'latitude': float(row[6]),
+                    'longitude': float(row[7])
                 })
-        return list(tours_map.values())
 
-<<<<<<< Updated upstream
         return list(tours_map.values())
 
 # ---------------------------------------------------------------------------
@@ -330,26 +341,57 @@ def get_group_members(group_id, connection_sql):
         if point_id is not None:
             member['visited'].append(point_id)
     return list(members.values())
-=======
+
+
+# ---------------------------------------------------------------------------
+# Usuários (cadastro e login)
+# ---------------------------------------------------------------------------
+
+def username_exists(username, connection_sql):
+    """Retorna True se já existe um usuário com esse nome."""
+    with connection_sql.cursor() as cur:
+        cur.execute("SELECT 1 FROM users WHERE username = %s;", (username,))
+        return cur.fetchone() is not None
+
+
 def register_user(data, connection_sql):
-    query = "INSERT INTO users (username, password, role) VALUES (%s, %s, %s) RETURNING id, role;"
-    try:
-        with connection_sql.cursor() as cur:
-            cur.execute(query, (data['username'], data['password'], data['role']))
-            user_id, role = cur.fetchone()
-            connection_sql.commit()
-            return {'status': 'success', 'id': user_id, 'role': role}
-    except Exception as e:
-        connection_sql.rollback()
-        return {'status': 'error', 'message': f'Erro ao registar: {str(e)}'}
+    """Cadastra um usuário e retorna seu ID."""
+    query = "INSERT INTO users (username, password, role) VALUES (%s, %s, %s) RETURNING id;"
+    with connection_sql.cursor() as cur:
+        cur.execute(query, (data['username'], data['password'], data['role']))
+        user_id = cur.fetchone()[0]
+        connection_sql.commit()
+        return user_id
+
 
 def login_user(data, connection_sql):
+    """Retorna (id, role) se usuário e senha conferem, ou None."""
     query = "SELECT id, role FROM users WHERE username = %s AND password = %s;"
     with connection_sql.cursor() as cur:
         cur.execute(query, (data['username'], data['password']))
-        result = cur.fetchone()
-        if result:
-            return {'status': 'success', 'id': result[0], 'role': result[1]}
-        else:
-            return {'status': 'error', 'message': 'Credenciais inválidas.'}
->>>>>>> Stashed changes
+        return cur.fetchone()
+
+
+# ---------------------------------------------------------------------------
+# Exclusão de pontos e tours (administrador)
+# ---------------------------------------------------------------------------
+
+def point_exists(point_id, connection_sql):
+    """Retorna True se existe um ponto de interesse com esse ID."""
+    with connection_sql.cursor() as cur:
+        cur.execute("SELECT 1 FROM points_of_interest WHERE id = %s;", (point_id,))
+        return cur.fetchone() is not None
+
+
+def delete_point(point_id, connection_sql):
+    """Exclui o ponto (e seus vínculos com tours e visitas, via CASCADE)."""
+    with connection_sql.cursor() as cur:
+        cur.execute("DELETE FROM points_of_interest WHERE id = %s;", (point_id,))
+        connection_sql.commit()
+
+
+def delete_tour(tour_id, connection_sql):
+    """Exclui o tour e seus vínculos com pontos."""
+    with connection_sql.cursor() as cur:
+        cur.execute("DELETE FROM tours WHERE id = %s;", (tour_id,))
+        connection_sql.commit()
