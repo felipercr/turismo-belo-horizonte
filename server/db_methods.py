@@ -218,3 +218,51 @@ def get_tour_point_ids(tour_id, connection_sql):
     with connection_sql.cursor() as cur:
         cur.execute(query, (tour_id,))
         return [row[0] for row in cur.fetchall()]
+
+
+# ---------------------------------------------------------------------------
+# Turistas e visitas
+# ---------------------------------------------------------------------------
+
+def add_tourist(name, connection_sql):
+    """Cadastra um turista e retorna o ID gerado."""
+    with connection_sql.cursor() as cur:
+        cur.execute("INSERT INTO tourists (name) VALUES (%s) RETURNING id;", (name,))
+        tourist_id = cur.fetchone()[0]
+        connection_sql.commit()
+        return tourist_id
+
+
+def get_tourist(tourist_id, connection_sql):
+    """Retorna o turista como dicionário, ou None se não existir."""
+    query = "SELECT id, name, tour_id, group_id FROM tourists WHERE id = %s;"
+    with connection_sql.cursor() as cur:
+        cur.execute(query, (tourist_id,))
+        row = cur.fetchone()
+    if row is None:
+        return None
+    return {'id': row[0], 'name': row[1], 'tour_id': row[2], 'group_id': row[3]}
+
+
+def set_tourist_tour(tourist_id, tour_id, connection_sql):
+    """Define o tour escolhido pelo turista (apaga visitas do tour anterior)."""
+    with connection_sql.cursor() as cur:
+        cur.execute("DELETE FROM visits WHERE tourist_id = %s;", (tourist_id,))
+        cur.execute("UPDATE tourists SET tour_id = %s WHERE id = %s;", (tour_id, tourist_id))
+        connection_sql.commit()
+
+
+def add_visit(tourist_id, point_id, connection_sql):
+    """Registra que o turista visitou o PDI."""
+    query = "INSERT INTO visits (tourist_id, point_id) VALUES (%s, %s);"
+    with connection_sql.cursor() as cur:
+        cur.execute(query, (tourist_id, point_id))
+        connection_sql.commit()
+
+
+def get_visited_point_ids(tourist_id, connection_sql):
+    """Retorna a lista de IDs dos PDIs já visitados pelo turista."""
+    query = "SELECT point_id FROM visits WHERE tourist_id = %s ORDER BY visited_at;"
+    with connection_sql.cursor() as cur:
+        cur.execute(query, (tourist_id,))
+        return [row[0] for row in cur.fetchall()]
