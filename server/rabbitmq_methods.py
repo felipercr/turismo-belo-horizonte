@@ -4,7 +4,7 @@ import json
 from functools import partial
 
 import db_methods
-import business_logic
+from api import business_logic
 
 def connect_to_rabbitmq(host, max_retries=5, delay=10):
     credentials = pika.PlainCredentials('guest', 'guest')
@@ -30,7 +30,7 @@ def callback(ch, method, properties, body, connection_sql):
         msg_type = payload.get('type')
         response_data = None
 
-        # --- Ações tratadas pelas regras de negócio (business_logic.py) ---
+        # --- Ações tratadas pelas regras de negócio (api/business_logic.py) ---
         if msg_type in business_logic.HANDLERS:
             response_data = business_logic.HANDLERS[msg_type](payload, connection_sql)
 

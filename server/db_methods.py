@@ -178,7 +178,7 @@ def get_tours(connection_sql):
         return list(tours_map.values())
 
 # ---------------------------------------------------------------------------
-# Consultas auxiliares usadas pelas regras de negócio (business_logic.py)
+# Consultas auxiliares usadas pelas regras de negócio (api/business_logic.py)
 # ---------------------------------------------------------------------------
 
 def get_existing_point_ids(point_ids, connection_sql):
