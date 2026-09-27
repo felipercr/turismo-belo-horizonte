@@ -1,7 +1,7 @@
 # Mensagens da API (fila `my_queue` no RabbitMQ)
 
 Toda requisição é um JSON com o campo `type`. A resposta volta na fila
-indicada em `reply_to` (padrão RPC; ver `tests/read_db.py`).
+indicada em `reply_to` (padrão RPC; ver `server/tests/read_db.py`).
 Em caso de erro, a resposta é `{"status": "error", "message": "..."}`.
 
 ## Administrador
