@@ -5,7 +5,7 @@ let channel;
 let replyQueue;
 const pendingRequests = new Map();
 
-async function initRabbitMQ(rabbitUrl, retries = 5, delay = 5000) {
+async function initRabbitMQ(rabbitUrl, retries = 20, delay = 5000) {
     while (retries > 0) {
         try {
             console.log(`Tentando conectar ao RabbitMQ. Tentativas restantes: ${retries}`);

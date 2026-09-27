@@ -54,6 +54,7 @@ services:
   api-gateway:
     build: ./api-gateway
     container_name: node_api
+    restart: on-failure  # se o RabbitMQ demorar a ligar, tenta de novo
     depends_on:
       rabbitmq:
         condition: service_healthy
