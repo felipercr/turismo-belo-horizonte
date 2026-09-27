@@ -199,6 +199,36 @@ def handle_join_group(payload, connection_sql):
 
 
 # ---------------------------------------------------------------------------
+# História 8: ver o progresso de cada membro do grupo
+# ---------------------------------------------------------------------------
+
+def handle_get_group_progress(payload, connection_sql):
+    code = _require_text(payload, 'code', CODE_LENGTH).upper()
+    group = db_methods.get_group_by_code(code, connection_sql)
+    if group is None:
+        raise ValueError(f"Nenhum grupo encontrado com o código '{code}'.")
+
+    tour = next(t for t in db_methods.get_tours(connection_sql)
+                if t['id'] == group['tour_id'])
+    point_names = {p['id']: p['name'] for p in tour['points']}
+    total = len(point_names)
+
+    members = []
+    for member in db_methods.get_group_members(group['id'], connection_sql):
+        members.append({
+            'id': member['id'],
+            'name': member['name'],
+            'visited_points': [
+                {'id': pid, 'name': point_names.get(pid)} for pid in member['visited']
+            ],
+            'visited_count': len(member['visited']),
+            'total_points': total,
+        })
+
+    return {'code': group['code'], 'tour': tour, 'members': members}
+
+
+# ---------------------------------------------------------------------------
 # Tabela de despacho: tipo de mensagem -> função que trata
 # (usada pelo callback em rabbitmq_methods.py)
 # ---------------------------------------------------------------------------
@@ -213,4 +243,5 @@ HANDLERS = {
     'get_tourist_progress': handle_get_tourist_progress,
     'create_group': handle_create_group,
     'join_group': handle_join_group,
+    'get_group_progress': handle_get_group_progress,
 }
