@@ -11,6 +11,15 @@ Em caso de erro, a resposta é `{"status": "error", "message": "..."}`.
 | `add_point` | `name`, `description`?, `latitude`, `longitude` | `{"status": "success", "id": 1}` |
 | `add_tour` | `name`, `description`?, `pontos_ids` (lista, mín. 1) | `{"status": "success", "id": 1}` |
 | `add_point_to_tour` | `tour_id`, `point_id` | `{"status": "success"}` |
+| `delete_point` | `point_id` | `{"status": "success"}` |
+| `delete_tour` | `tour_id` | `{"status": "success"}` |
+
+## Login
+
+| `type` | Campos | Resposta |
+|---|---|---|
+| `register` | `username`, `password`, `role` (`user` ou `admin`) | `{"status": "success", "id": 1, "role": "user"}` |
+| `login` | `username`, `password` | `{"status": "success", "id": 1, "role": "admin"}` |
 
 ## Consultas
 
@@ -43,3 +52,11 @@ Em caso de erro, a resposta é `{"status": "error", "message": "..."}`.
 - Quem entra em um grupo passa a fazer o tour do grupo (visitas anteriores são zeradas).
 - Turista em grupo não pode trocar de tour nem entrar em outro grupo.
 - Códigos de grupo têm 6 caracteres, sem letras/números ambíguos (0, O, 1, I, L).
+
+## Frontend
+
+O navegador não fala AMQP, então o frontend conversa com o **API gateway**
+(`server/api-gateway`, Node.js), que expõe rotas REST (`/api/points`,
+`/api/tours`, `/api/login`...) e repassa cada pedido para a fila `my_queue`.
+Com o `docker compose` rodando, a interface fica em **http://localhost:3000**.
+
