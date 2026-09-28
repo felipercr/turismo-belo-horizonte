@@ -98,3 +98,69 @@ classDiagram
     AplicacaoPython ..> RabbitMQ : publica e consome mensagens
     AplicacaoPython ..> PostgreSQL : le e grava dados
 ```
+
+```mermaid
+classDiagram
+    direction LR
+
+    class PointsOfInterest {
+        <<table>>
+        +serial id PK
+        +varchar(150) name
+        +text description
+        +decimal(9,6) latitude
+        +decimal(9,6) longitude
+    }
+
+    class Tours {
+        <<table>>
+        +serial id PK
+        +varchar(150) name
+        +text description
+    }
+
+    class TourPoints {
+        <<association table>>
+        +int tour_id PK, FK
+        +int point_of_interest_id PK, FK
+    }
+
+    class TourGroups {
+        <<table>>
+        +serial id PK
+        +varchar(8) code UK
+        +int tour_id FK
+        +timestamp created_at
+    }
+
+    class Tourists {
+        <<table>>
+        +serial id PK
+        +varchar(100) name
+        +int tour_id FK, nullable
+        +int group_id FK, nullable
+    }
+
+    class Visits {
+        <<association table>>
+        +int tourist_id PK, FK
+        +int point_id PK, FK
+        +timestamp visited_at
+    }
+
+    class Users {
+        <<table>>
+        +serial id PK
+        +varchar(50) username UK
+        +varchar(100) password
+        +varchar(20) role
+    }
+
+    Tours "1" --> "0..*" TourPoints : possui
+    PointsOfInterest "1" --> "0..*" TourPoints : inclui
+    Tours "1" --> "0..*" TourGroups : organiza
+    Tours "0..1" --> "0..*" Tourists : escolhido por
+    TourGroups "0..1" --> "0..*" Tourists : agrupa
+    Tourists "1" --> "0..*" Visits : realiza
+    PointsOfInterest "1" --> "0..*" Visits : registra
+```
