@@ -38,7 +38,7 @@ Pré-requisitos: [Git](https://git-scm.com) e [Docker Desktop](https://www.docke
    ```
 2. Suba o sistema (banco, RabbitMQ, backend Python e API gateway Node):
    ```
-   docker compose -f server/docker-compose.yml up --build
+   sh run_server.sh
    ```
    Deixe esse terminal aberto e espere aparecer `API Gateway rodando na porta 3000`
    (o RabbitMQ leva cerca de 40 segundos para ligar).
