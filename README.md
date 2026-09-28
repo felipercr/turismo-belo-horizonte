@@ -61,6 +61,7 @@ Documentação das mensagens entre frontend e backend: [api/API.md](api/API.md).
 
 ## Documentação
 
+```mermaid
 flowchart LR
     SQLDb[(Banco de Dados SQL)] -->|leituras e escritas| PythonApp[Aplicação Python]
     PythonApp -->|publica e consome| RabbitMQ[Servidor RabbitMQ]
@@ -76,4 +77,4 @@ flowchart LR
     class RabbitMQ queue
     class App client
 
-
+```
