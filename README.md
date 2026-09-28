@@ -62,19 +62,39 @@ Documentação das mensagens entre frontend e backend: [api/API.md](api/API.md).
 ## Documentação
 
 ```mermaid
-flowchart LR
-    SQLDb[(Banco de Dados SQL)] -->|leituras e escritas| PythonApp[Aplicação Python]
-    PythonApp -->|publica e consome| RabbitMQ[Servidor RabbitMQ]
-    RabbitMQ -->|mensagens| App[Aplicação]
+classDiagram
+    direction LR
 
-    classDef database stroke:#f87171,fill:#fef2f2
-    classDef backend stroke:#818cf8,fill:#eef2ff
-    classDef queue stroke:#facc15,fill:#fefce8
-    classDef client stroke:#4ade80,fill:#f0fdf4
+    class Usuario {
+        <<actor>>
+    }
 
-    class SQLDb database
-    class PythonApp backend
-    class RabbitMQ queue
-    class App client
+    class APIGateway {
+        <<component>>
+        Node.js
+        Frontend e API HTTP
+        Porta 3000
+    }
 
+    class RabbitMQ {
+        <<component>>
+        Broker AMQP
+        Porta 5672
+    }
+
+    class AplicacaoPython {
+        <<component>>
+        Servico de negocio
+    }
+
+    class PostgreSQL {
+        <<database>>
+        Banco de dados
+        Porta 5432
+    }
+
+    Usuario ..> APIGateway : acessa via HTTP
+    APIGateway ..> RabbitMQ : publica e consome mensagens
+    AplicacaoPython ..> RabbitMQ : publica e consome mensagens
+    AplicacaoPython ..> PostgreSQL : le e grava dados
 ```
