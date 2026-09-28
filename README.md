@@ -58,3 +58,22 @@ Demonstração das histórias 3 a 8 pelo terminal (com o sistema rodando):
 `docker compose -f server/docker-compose.yml down -v` e `docker volume prune -f` e suba de novo.
 
 Documentação das mensagens entre frontend e backend: [api/API.md](api/API.md).
+
+## Documentação
+
+flowchart LR
+    SQLDb[(Banco de Dados SQL)] -->|leituras e escritas| PythonApp[Aplicação Python]
+    PythonApp -->|publica e consome| RabbitMQ[Servidor RabbitMQ]
+    RabbitMQ -->|mensagens| App[Aplicação]
+
+    classDef database stroke:#f87171,fill:#fef2f2
+    classDef backend stroke:#818cf8,fill:#eef2ff
+    classDef queue stroke:#facc15,fill:#fefce8
+    classDef client stroke:#4ade80,fill:#f0fdf4
+
+    class SQLDb database
+    class PythonApp backend
+    class RabbitMQ queue
+    class App client
+
+
