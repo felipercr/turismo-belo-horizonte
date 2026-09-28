@@ -58,5 +58,7 @@ Em caso de erro, a resposta é `{"status": "error", "message": "..."}`.
 O navegador não fala AMQP, então o frontend conversa com o **API gateway**
 (`server/api-gateway`, Node.js), que expõe rotas REST (`/api/points`,
 `/api/tours`, `/api/login`...) e repassa cada pedido para a fila `my_queue`.
-Com o `docker compose` rodando, a interface fica em **http://localhost:3000**.
+O código da interface fica em `frontend/index.html`; o gateway o entrega ao
+navegador. Com o `docker compose` rodando, a interface fica em
+**http://localhost:3000**.
 

@@ -1,6 +1,12 @@
 FROM node:18-alpine
 WORKDIR /app
-COPY package*.json ./
+
+# Dependências do gateway
+COPY server/api-gateway/package*.json ./
 RUN npm install
-COPY . .
+
+# Código do gateway e o frontend (servido como arquivos estáticos em /public)
+COPY server/api-gateway/ .
+COPY frontend/ ./public/
+
 CMD ["node", "server.js"]
